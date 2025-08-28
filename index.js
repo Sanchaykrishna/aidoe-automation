@@ -1,11 +1,9 @@
 import { create } from "venom-bot";
 import OpenAI from "openai";
-import dotenv from "dotenv";
 
-dotenv.config();
-
+// Render provides environment variables automatically from Dashboard → Environment
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY, // ✅ make sure you set this in Render
 });
 
 create({
@@ -13,7 +11,7 @@ create({
   multidevice: true,
 })
   .then((client) => start(client))
-  .catch((err) => console.log(err));
+  .catch((err) => console.error("Venom error:", err));
 
 function start(client) {
   client.onMessage(async (message) => {
@@ -25,9 +23,9 @@ function start(client) {
         });
 
         const reply = completion.choices[0].message.content;
-        client.sendText(message.from, reply);
+        await client.sendText(message.from, reply);
       } catch (error) {
-        console.error(error);
+        console.error("OpenAI error:", error);
         client.sendText(message.from, "⚠️ Error generating reply.");
       }
     }
