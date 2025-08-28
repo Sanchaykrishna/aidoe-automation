@@ -1,58 +1,55 @@
-import { create } from "venom-bot";
-import OpenAI from "openai";
-import express from "express";
+import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from 'baileys';
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+dotenv.config();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-create({
-  session: "aidoe",
-  multidevice: true,
-  puppeteerOptions: {
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--single-process",
-      "--disable-gpu"
-    ],
-    headless: true,
-    executablePath: "/usr/bin/google-chrome", // Use system Chrome in Render
-  },
-})
-  .then((client) => start(client))
-  .catch((err) => console.error("Venom error:", err));
+async function startWhatsApp() {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-function start(client) {
-  client.onMessage(async (message) => {
-    if (!message.isGroupMsg) {
-      try {
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: message.body }],
-        });
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: true
+  });
 
-        const reply = completion.choices[0].message.content;
-        await client.sendText(message.from, reply);
-      } catch (error) {
-        console.error("OpenAI error:", error);
-        client.sendText(message.from, "⚠️ Error generating reply.");
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+    if (!text) return;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo", // ✅ Using your existing key
+        messages: [{ role: "user", content: text }]
+      });
+
+      const reply = completion.choices[0].message.content;
+      await sock.sendMessage(msg.key.remoteJid, { text: reply });
+    } catch (err) {
+      console.error("OpenAI error:", err);
+      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Error generating reply." });
+    }
+  });
+
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update;
+    if (connection === 'close') {
+      if (!lastDisconnect?.error?.output || lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut) {
+        console.log("Reconnecting...");
+        startWhatsApp();
+      } else {
+        console.log("Logged out, scan QR again.");
       }
     }
   });
 }
 
-app.get("/", (req, res) => {
-  res.send("✅ Aidoe WhatsApp bot is running!");
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+startWhatsApp();

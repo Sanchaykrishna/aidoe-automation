@@ -1,15 +1,3 @@
-# Ignore environment variables
-.env
-
-# Ignore Node.js dependencies
 node_modules/
-
-# Ignore Venom Bot session files
-tokens/
-sessions/
-session.data.json
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.env
+auth_info/
