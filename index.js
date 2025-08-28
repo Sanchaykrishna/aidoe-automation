@@ -1,15 +1,21 @@
-import { Client, LocalAuth } from "whatsapp-web.js";
+import pkg from "whatsapp-web.js";
+const { Client, LocalAuth } = pkg;
+
 import qrcode from "qrcode-terminal";
 import OpenAI from "openai";
 
 // Setup OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Put this in Railway's environment vars
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Setup WhatsApp client
+// Setup WhatsApp client with system Chrome path
 const client = new Client({
   authStrategy: new LocalAuth(),
+  puppeteer: {
+    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Path to your Chrome
+    headless: true, // run without opening a visible browser window
+  },
 });
 
 client.on("qr", (qr) => {
@@ -26,9 +32,8 @@ client.on("message", async (message) => {
 
     console.log(`💬 Incoming: ${message.body}`);
 
-    // Send user query to OpenAI
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // fast + cheap
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: message.body }],
     });
 
