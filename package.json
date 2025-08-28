@@ -4,6 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "preinstall": "npm config set puppeteer_skip_chromium_download true",
     "start": "node index.js"
   },
   "engines": {
