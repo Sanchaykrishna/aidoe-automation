@@ -3,17 +3,29 @@ import OpenAI from "openai";
 import express from "express";
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Render auto-assigns PORT
+const PORT = process.env.PORT || 3000;
 
-// OpenAI setup
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Start Venom Bot
 create({
   session: "aidoe",
   multidevice: true,
+  puppeteerOptions: {
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process",
+      "--disable-gpu"
+    ],
+    headless: true,
+    executablePath: "/usr/bin/google-chrome", // Use system Chrome in Render
+  },
 })
   .then((client) => start(client))
   .catch((err) => console.error("Venom error:", err));
@@ -37,7 +49,6 @@ function start(client) {
   });
 }
 
-// Keep Render happy with a small HTTP server
 app.get("/", (req, res) => {
   res.send("✅ Aidoe WhatsApp bot is running!");
 });
