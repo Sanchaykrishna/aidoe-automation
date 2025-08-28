@@ -1,11 +1,16 @@
 import { create } from "venom-bot";
 import OpenAI from "openai";
+import express from "express";
 
-// Render provides environment variables automatically from Dashboard → Environment
+const app = express();
+const PORT = process.env.PORT || 3000; // Render auto-assigns PORT
+
+// OpenAI setup
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // ✅ make sure you set this in Render
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Start Venom Bot
 create({
   session: "aidoe",
   multidevice: true,
@@ -15,7 +20,7 @@ create({
 
 function start(client) {
   client.onMessage(async (message) => {
-    if (message.isGroupMsg === false) {
+    if (!message.isGroupMsg) {
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",
@@ -31,3 +36,12 @@ function start(client) {
     }
   });
 }
+
+// Keep Render happy with a small HTTP server
+app.get("/", (req, res) => {
+  res.send("✅ Aidoe WhatsApp bot is running!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
