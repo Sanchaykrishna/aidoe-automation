@@ -3,19 +3,34 @@ const { Client, LocalAuth } = pkg;
 
 import qrcode from "qrcode-terminal";
 import OpenAI from "openai";
+import os from "os";
 
 // Setup OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Setup WhatsApp client with system Chrome path
+// Detect environment: Windows (local) vs Railway/Linux (prod)
+let puppeteerConfig = { headless: true };
+
+if (os.platform() === "win32") {
+  // Local Windows (use installed Chrome)
+  puppeteerConfig.executablePath =
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+} else {
+  // Railway/Linux (use bundled Chromium with safe args)
+  puppeteerConfig.args = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+  ];
+}
+
+// Setup WhatsApp client
 const client = new Client({
   authStrategy: new LocalAuth(),
-  puppeteer: {
-    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Path to your Chrome
-    headless: true, // run without opening a visible browser window
-  },
+  puppeteer: puppeteerConfig,
 });
 
 client.on("qr", (qr) => {
