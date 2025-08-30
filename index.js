@@ -1,50 +1,56 @@
-import pkg from "whatsapp-web.js";
-const { Client, LocalAuth } = pkg;
+require('dotenv').config();
+const { create } = require('venom-bot');
+const OpenAI = require('openai');
+const express = require('express');
 
-import qrcode from "qrcode-terminal";
-import OpenAI from "openai";
-
-// Setup OpenAI
+// OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Setup WhatsApp client with system Chrome path (Linux for Railway)
-const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    executablePath: "/usr/bin/google-chrome", // Linux Chrome path
-    headless: true, // Run without opening a visible browser window
-    args: ["--no-sandbox", "--disable-setuid-sandbox"] // Stability flags
-  },
-});
+// Start Venom
+create({
+  session: 'session1',
+  multidevice: true,
+  headless: true,        // ✅ Required for Koyeb (no GUI)
+  useChrome: true,
+  browserArgs: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox'
+  ]
+}).then((client) => start(client));
 
-client.on("qr", (qr) => {
-  qrcode.generate(qr, { small: true });
-});
+function start(client) {
+  client.onMessage(async (message) => {
+    if (!message.isGroupMsg) {
+      try {
+        // Call OpenAI
+        const response = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: message.body }],
+        });
 
-client.on("ready", () => {
-  console.log("✅ WhatsApp bot is ready!");
-});
+        const reply =
+          response.choices[0].message?.content || "⚠️ Sorry, I couldn’t reply.";
 
-client.on("message", async (message) => {
-  try {
-    if (!message.body) return;
+        await client.sendText(message.from, reply);
+        console.log("✅ User:", message.body);
+        console.log("✅ Recuria:", reply);
 
-    console.log(`💬 Incoming: ${message.body}`);
+      } catch (err) {
+        console.error("❌ Error:", err.message);
+        await client.sendText(
+          message.from,
+          "⚠️ Error: Couldn’t fetch reply from AI."
+        );
+      }
+    }
+  });
+}
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: message.body }],
-    });
-
-    const reply = completion.choices[0].message.content;
-    console.log(`🤖 Replying: ${reply}`);
-
-    message.reply(reply);
-  } catch (err) {
-    console.error("❌ Error:", err);
-  }
-});
-
-client.initialize();
+// ✅ Express server for Koyeb / cloud hosting
+const app = express();
+app.get("/", (req, res) => res.send("✅ Recuria running 24/7"));
+app.listen(process.env.PORT || 3000, () =>
+  console.log("🌍 Web server running on port " + (process.env.PORT || 3000))
+);
