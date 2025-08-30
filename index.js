@@ -12,7 +12,7 @@ const openai = new OpenAI({
 create({
   session: 'session1',
   multidevice: true,
-  headless: true,        // ✅ Required for Koyeb (no GUI)
+  headless: false,        // 🚀 Open Chrome visibly (not headless)
   useChrome: true,
   browserArgs: [
     '--no-sandbox',
