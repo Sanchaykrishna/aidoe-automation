@@ -24,6 +24,12 @@ function start(client) {
   client.onMessage(async (message) => {
     if (!message.isGroupMsg) {
       try {
+        // ✅ Ignore messages with no text
+        if (!message.body || typeof message.body !== "string") {
+          console.log("⚠️ Skipped non-text message");
+          return;
+        }
+
         // Call OpenAI
         const response = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",

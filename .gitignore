@@ -1,9 +1,17 @@
-node_modules/
+# Node modules
+node_modules
+
+# Logs
+npm-debug.log
+yarn-error.log
+*.log
+
+# Env files
 .env
-auth_info/
-node_modules/
-auth_info/
-.railway/
-node_modules/
-auth_info/
-.railway/
+
+# Token/session files (ignore heavy or locked parts)
+tokens/session1/Default/Network/Cookies
+
+# System files
+.DS_Store
+Thumbs.db
